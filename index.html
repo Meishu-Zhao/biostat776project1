@@ -442,11 +442,11 @@ as_tibble(chocolate)</code></pre>
 ## $ rating                           &lt;dbl&gt; 3.25, 3.50, 3.75, 3.00, 3.00, 3.25, 3…</code></pre>
 <div id="part-1" class="section level2">
 <h2>Part 1</h2>
-<p><strong>1</strong> Make a histogram of the rating scores to visualize
-the overall distribution of scores. Change the number of bins from the
+<p><strong>1. Make a histogram of the rating scores to visualize the
+overall distribution of scores. Change the number of bins from the
 default to 10, 15, 20, and 25. Pick on the one that you think looks the
 best. Explain what the difference is when you change the number of bins
-and explain why you picked the one you did.</p>
+and explain why you picked the one you did.</strong></p>
 <pre class="r"><code>library(ggplot2)
 
 ggplot(chocolate, aes(x = rating)) +
@@ -473,6 +473,119 @@ strikes a good balance between showing enough information and
 maintaining a clear view of the overall distribution.</p>
 <p><strong>2. Consider the countries where the beans originated from.
 How many reviews come from each country of bean origin?</strong></p>
+<pre class="r"><code>chocolate %&gt;%
+  count(country_of_bean_origin)</code></pre>
+<pre><code>## # A tibble: 62 × 2
+##    country_of_bean_origin     n
+##    &lt;chr&gt;                  &lt;int&gt;
+##  1 Australia                  3
+##  2 Belize                    76
+##  3 Blend                    156
+##  4 Bolivia                   80
+##  5 Brazil                    78
+##  6 Burma                      1
+##  7 Cameroon                   3
+##  8 China                      1
+##  9 Colombia                  79
+## 10 Congo                     11
+## # ℹ 52 more rows</code></pre>
+<p><strong>3. What is average rating scores from reviews of chocolate
+bars that have Ecuador as country_of_bean_origin in this dataset? For
+this same set of reviews, also calculate (1) the total number of reviews
+and (2) the standard deviation of the rating scores. Your answer should
+be a new data frame with these three summary statistics in three
+columns. Label the name of these columns mean, sd, and
+total.</strong></p>
+<pre class="r"><code>Ecuador_summary = chocolate %&gt;%
+  filter(country_of_bean_origin == &quot;Ecuador&quot;) %&gt;%
+  summarise(mean = mean(rating),
+            sd = sd(rating),
+            total = n())
+Ecuador_summary</code></pre>
+<pre><code>## # A tibble: 1 × 3
+##    mean    sd total
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;
+## 1  3.16 0.512   219</code></pre>
+<p><strong>4. Which company location makes the best chocolate (or has
+the highest ratings on average) with beans from Ecuador?</strong></p>
+<pre class="r"><code>chocolate %&gt;% 
+  filter(country_of_bean_origin == &quot;Ecuador&quot;) %&gt;%
+  group_by(company_location) %&gt;% 
+  summarize(location_rating = mean(rating, na.rm = TRUE)) %&gt;% 
+  arrange(desc(location_rating))</code></pre>
+<pre><code>## # A tibble: 25 × 2
+##    company_location location_rating
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 Australia                   3.81
+##  2 Switzerland                 3.75
+##  3 New Zealand                 3.62
+##  4 Hungary                     3.5 
+##  5 Israel                      3.5 
+##  6 Netherlands                 3.5 
+##  7 Singapore                   3.5 
+##  8 South Korea                 3.33
+##  9 Canada                      3.28
+## 10 U.S.A.                      3.26
+## # ℹ 15 more rows</code></pre>
+<p>Australia makes the best chocolate (or has the highest ratings on
+average) with beans from Ecuador?</p>
+<p><strong>5.Calculate the average rating across all country of origins
+for beans. Which top 3 countries (for bean origin) have the highest
+ratings on average?</strong></p>
+<p><strong>6. Following up on the previous problem, now remove any
+countries of bean origins that have less than 10 chocolate bar reviews.
+Now, which top 3 countries have the highest ratings on average?
+</strong></p>
+<p><strong>7.or this last part, let’s explore the relationship between
+percent chocolate and ratings.Use the functions in dplyr, tidyr, and
+lubridate to perform the following steps to the chocolate dataset:
+Identify the countries of bean origin with at least 50 reviews. Remove
+reviews from countries are not in this list.Using the variable
+describing the chocolate percentage for each review, create a new column
+that groups chocolate percentages into one of four groups: (i) &lt;60%,
+(ii) &gt;=60 to &lt;70%, (iii) &gt;=70 to &lt;90%, and (iii) &gt;=90%
+(Hint check out the substr() function in base R and the case_when()
+function from dplyr – see example below). Using the new column described
+in #2, re-order the factor levels (if needed) to be starting with the
+smallest percentage group and increasing to the largest percentage group
+(Hint check out the fct_relevel() function from forcats).For each
+country, make a set of four side-by-side boxplots plotting the groups on
+the x-axis and the ratings on the y-axis. These plots should be faceted
+by country.On average, which category of chocolate percentage is most
+highly rated? Do these countries mostly agree or are there
+disagreements? Hint: You may find the case_when() function useful in
+this part, which can be used to map values from one variable to
+different values in a new variable (when used in a mutate()
+call).</strong></p>
+<pre class="r"><code>## Generate some random numbers
+dat &lt;- tibble(x = rnorm(100))
+slice(dat, 1:3)</code></pre>
+<pre><code>## # A tibble: 3 × 1
+##        x
+##    &lt;dbl&gt;
+## 1  0.883
+## 2 -0.372
+## 3  0.585</code></pre>
+<pre class="r"><code>## Create a new column that indicates whether the value of &#39;x&#39; is positive or negative
+dat %&gt;%
+    mutate(is_positive = case_when(
+        x &gt;= 0 ~ &quot;Yes&quot;,
+        x &lt; 0 ~ &quot;No&quot;
+    ))</code></pre>
+<pre><code>## # A tibble: 100 × 2
+##         x is_positive
+##     &lt;dbl&gt; &lt;chr&gt;      
+##  1  0.883 Yes        
+##  2 -0.372 No         
+##  3  0.585 Yes        
+##  4  0.106 Yes        
+##  5 -1.42  No         
+##  6  0.449 Yes        
+##  7 -1.49  No         
+##  8  0.477 Yes        
+##  9  0.370 Yes        
+## 10 -0.197 No         
+## # ℹ 90 more rows</code></pre>
 </div>
 
 
