@@ -14,21 +14,15 @@ library("tidyverse")
 ```
 
 ```{r}
-## Install the tidytuesdayR package if you don't have it
+
 if (!require("tidytuesdayR", quietly = TRUE)) {
     install.packages("tidytuesdayR")
 }
 
-## For the GitHub version of tidytuesdayR (in case the CRAN version is not available)
-## you'll need the "remotes" package to install it.
-## See for example https://github.com/dslc-io/tidytuesdayR/issues/94 which led
-## to tidytuesdayR not been available from CRAN at the end of August 2024
-
-## Install the remotes package if you don't have it
 if (!require("remotes", quietly = TRUE)) {
     install.packages("remotes")
 }
-## Install the tidytuesdayR package (from GitHub) if you don't have it
+
 if (!require("tidytuesdayR", quietly = TRUE)) {
     remotes::install_github("dslc-io/tidytuesdayR")
 }
@@ -36,7 +30,6 @@ if (!require("tidytuesdayR", quietly = TRUE)) {
 
 ```{r}
 library("here")
-library("tidyverse")
 
 # tests if a directory named "data" exists locally
 if (!dir.exists(here("data"))) {
@@ -66,22 +59,28 @@ glimpse(chocolate)
 
 ```{r}
 library(ggplot2)
+if (!require("gridExtra", quietly = TRUE)) {
+    install.packages("gridExtra")
+}
+library(gridExtra)
 
-ggplot(chocolate, aes(x = rating)) +
+bin_10 <- ggplot(chocolate, aes(x = rating)) +
   geom_histogram(bins = 10) +
   ggtitle("Chocolate Rating with 10 bins")
 
-ggplot(chocolate, aes(x = rating)) +
+bin_15 <- ggplot(chocolate, aes(x = rating)) +
   geom_histogram(bins = 15) +
   ggtitle("Chocolate Rating with 15 bins")
 
-ggplot(chocolate, aes(x = rating)) +
+bin_20 <- ggplot(chocolate, aes(x = rating)) +
   geom_histogram(bins = 20) +
   ggtitle("Chocolate Rating with 20 bins")
 
-ggplot(chocolate, aes(x = rating)) +
+bin_25 <- ggplot(chocolate, aes(x = rating)) +
   geom_histogram(bins = 25) +
   ggtitle("Chocolate Rating with 25 bins")
+
+grid.arrange(bin_10, bin_15, bin_20, bin_25, ncol=2)
 ```
 I would choose 15 bins. As the number of bins increases, there’s a higher chance that some ratings will have no counts, creating gaps that make it harder to observe the overall trend of the scores. On the other hand, using only 10 bins provides less detail compared to 15, which strikes a good balance between showing enough information and maintaining a clear view of the overall distribution.
 
@@ -95,7 +94,7 @@ chocolate %>%
 ```{r}
 Ecuador_summary = chocolate %>%
   filter(country_of_bean_origin == "Ecuador") %>%
-  summarise(mean = mean(rating),
+  summarise(mean = mean(rating,na.rm = TRUE),
             sd = sd(rating),
             total = n())
 Ecuador_summary
@@ -109,7 +108,7 @@ chocolate %>%
   summarize(location_rating = mean(rating, na.rm = TRUE)) %>%
   arrange(desc(location_rating))
 ```
-Australia makes the best chocolate (or has the highest ratings on average) with beans from Ecuador?
+Australia makes the best chocolate (or has the highest ratings on average) with beans from Ecuador.
 
 **5.Calculate the average rating across all country of origins for beans. Which top 3 countries (for bean origin) have the highest ratings on average?**
 ```{r}
@@ -165,7 +164,8 @@ ggplot(chocolate_level, aes(x = chocolate_percentages, y = rating)) +
   facet_wrap(~ country_of_bean_origin) +
   labs(title = "Ratings of Chocolate by Country of Bean Origin and Chocolate Level", 
        x = "Chocolate Level", 
-       y = "Rating")
+       y = "Rating") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 #rating by chocolate
 average_ratings_by_group <- chocolate_level %>%
@@ -175,7 +175,7 @@ average_ratings_by_group <- chocolate_level %>%
 print(average_ratings_by_group)
 
 ```
-The medium low, 60% to 70% group has the highest rating. Most countries agrees with this result.
+The medium low, 60% to 70% group(medium low) has the highest rating. Most countries agrees with this result, although some countries have the mediums high(70% to 90%) the highest rating.
 
 
 ## Part 2 Join two datasets together
@@ -222,6 +222,205 @@ ggplot(chocolate_and_continent , aes(x = continent, y = rating)) +
        y = "Rating")
 ```
 
+## Part 3 Join two datasets together
+**Convert wide data into long data. The goal of this part of the assignment is to take a dataset that is either messy or simply not tidy and to make them tidy datasets. The objective is to gain some familiarity with the functions in the dplyr, tidyr packages. You may find it helpful to review the section on pivoting data from wide to long format and vice versa.**
+
+**We are going to create a set of features for us to plot over time. Use the functions in dplyr and tidyr to perform the following steps to the chocolate dataset:**
+
+**1.Create a new set of columns titled beans, sugar, cocoa_butter, vanilla, letchin, and salt that contain a 1 or 0 representing whether or not that review for the chocolate bar contained that ingredient (1) or not (0).**
+**2.Create a new set of columns titled char_cocoa, char_sweet, char_nutty, char_creamy, char_roasty, char_earthy that contain a 1 or 0 representing whether or not that the most memorable characteristic for the chocolate bar had that word (1) or not (0). For example, if the word “sweet” appears in the most_memorable_characteristics, then record a 1, otherwise a 0 for that review in the char_sweet column (Hint: check out str_detect() from the stringr package).**
+**3.For each year (i.e. review_date), calculate the mean value in each new column you created across all reviews for that year. (Hint: If all has gone well thus far, you should have a dataset with 16 rows and 13 columns).**
+**4.Convert this wide dataset into a long dataset with a new feature and mean_score column.**
+
+```{r}
+#1
+chocolate_part_3 <- chocolate %>%
+  mutate(
+    beans = if_else(is.na(ingredients) | !str_detect(ingredients, "B"), 0, 1),
+    sugar = if_else(is.na(ingredients) | !str_detect(ingredients, "\\bS\\b"), 0, 1),
+    cocoa_butter = if_else(is.na(ingredients) | !str_detect(ingredients, "C"), 0, 1),
+    vanilla = if_else(is.na(ingredients) | !str_detect(ingredients, "V"), 0, 1),
+    letchin = if_else(is.na(ingredients) | !str_detect(ingredients, "L"), 0, 1),
+    salt = if_else(is.na(ingredients) | !str_detect(ingredients, "Sa"), 0, 1)
+  )
+
+#2
+chocolate_part_3 <- chocolate_part_3 %>%
+  mutate(
+    char_cocoa = ifelse(str_detect(most_memorable_characteristics, "cocoa"), 1, 0),
+    char_sweet = ifelse(str_detect(most_memorable_characteristics, "sweet"), 1, 0),
+    char_nutty = ifelse(str_detect(most_memorable_characteristics, "nutty"), 1, 0),
+    char_creamy = ifelse(str_detect(most_memorable_characteristics, "creamy"), 1, 0),
+    char_roasty = ifelse(str_detect(most_memorable_characteristics, "roasty"), 1, 0),
+    char_earthy = ifelse(str_detect(most_memorable_characteristics, "earthy"), 1, 0)
+  )
+
+#3
+chocolate_summary <- chocolate_part_3 %>%
+  group_by(review_date) %>%
+  summarize(
+    mean_beans = mean(beans, na.rm = TRUE),
+    mean_sugar = mean(sugar, na.rm = TRUE),
+    mean_cocoa_butter = mean(cocoa_butter, na.rm = TRUE),
+    mean_vanilla = mean(vanilla, na.rm = TRUE),
+    mean_letchin = mean(letchin, na.rm = TRUE),
+    mean_salt = mean(salt, na.rm = TRUE),
+    mean_char_cocoa = mean(char_cocoa, na.rm = TRUE),
+    mean_char_sweet = mean(char_sweet, na.rm = TRUE),
+    mean_char_nutty = mean(char_nutty, na.rm = TRUE),
+    mean_char_creamy = mean(char_creamy, na.rm = TRUE),
+    mean_char_roasty = mean(char_roasty, na.rm = TRUE),
+    mean_char_earthy = mean(char_earthy, na.rm = TRUE)
+  )
+
+print(chocolate_summary) # 16*13
+
+#4
+chocolate_long <- chocolate_summary %>%
+  pivot_longer(cols = -review_date, names_to = "feature", values_to = "mean_score")
+
+print(chocolate_long)
+```
+
+
+## Part 4: Data visualization
+**In this part of the project, we will continue to work with our now tidy song dataset from the previous part.**
+**Use the functions in ggplot2 package to make a scatter plot of the mean_scores (y-axis) over time (x-axis). There should be one plot (facet) for each feature. For full credit, your plot should include:An overall title for the plot and a subtitle summarizing key trends that you found. Also include a caption in the figure with your name.Both the observed points for the mean_score, but also a smoothed non-linear pattern of the trend. **
+
+**All plots should be shown in the one figure**
+**There should be an informative x-axis and y-axis label. Consider playing around with the theme() function to make the figure shine, including playing with background colors, font, etc. See https://github.com/lcolladotor/jhustatcomputing/issues/4 for an example on how you can choose colors if you have too many categories.**
+**Don’t worry about the ordering of the rows or columns. Depending on whether you use gather() or pivot_longer(), the order of your output may differ from what is printed above. As long as the result is a tidy data set, that is sufficient.**
+
+```{r}
+ggplot(chocolate_long, aes(x = review_date, 
+                           y = mean_score)) +
+  geom_point(aes(color = feature), alpha = 1/2, size = 2) + 
+  geom_smooth(method = "loess", color = "black", se = FALSE, size=0.5) +
+  facet_wrap(~ feature, scales = "free_y") +
+  labs(
+    title = "Mean Scores of Chocolate Features Over Time",
+    subtitle = "Key trends: Each feature have their unique non-linear pattern over the years",
+    x = "Review Year",
+    y = "Mean Score",
+    caption = "Meishu Zhao"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 15), 
+    axis.title = element_text(size = 10),
+    strip.text = element_text(size = 5, face = "bold"), #resize facet title
+    axis.text.x = element_text(angle = 45, hjust = 1) #rotate year
+  )
+```
+
+## Part 5: Make the worst plot you can!
+**This sounds a bit crazy I know, but I want this to try and be FUN! Instead of trying to make a “good” plot, I want you to explore your creative side and make a really awful data visualization in every way. :)**
+
+**Using the chocolate dataset (or any of the modified versions you made throughout this assignment or anything else you wish you build upon it):**
+
+**Make the absolute worst plot that you can. You need to customize it in at least 7 ways to make it awful.**
+**In your document, write 1 - 2 sentences about each different customization you added (using bullets – i.e. there should be at least 7 bullet points each with 1-2 sentences), and how it could be useful for you when you want to make an awesome data visualization.**
+
+```{r}
+bad_plot <- chocolate %>% 
+  ggplot(aes(
+  x=review_date,
+  y=rating
+))
+bad_plot +
+  geom_point(size = 16, alpha = 1 / 99, color="grey") +
+  geom_smooth(se = TRUE, size = 07, color = "hotpink") +
+  labs(
+    title="a plot",
+    x="Time",
+    y="Rating"
+  ) +
+  theme(
+    plot.background = element_rect(fill = "purple"),
+    axis.title.x = element_text(size = 20, color = "red"),  
+    axis.title.y = element_text(size = 20, color = "blue"),  
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, color = "green", size = 15),
+    axis.text.y = element_text(size = 3, color = "yellow")
+  )
+```
+1. The point color is grey, causing the points to blend into the default ggplot background, making the data hard to see. When creating a good plot, point color should be set to ensure people can clearly see the data.
+
+2. The point size is too large, causing overlap and making it difficult to observe any patterns or trends in the data. When creating a good plot, point size should be set to avoid overlap and allow the data to be easily interpreted.
+
+3. The alpha level is too low, making it hard to detect the ratings even when points overlap slightly. While adjusting transparency can be helpful in scatter plots, here it obscures the data instead of revealing it. When creating a good plot, the alpha level should be set to a reasonable value to make the data more visible.
+
+4. The trend line is too thick and the hot pink color is too distracting. Despite adding `se = TRUE`, the confidence interval is hidden because the line overpowers the plot. When creating a good plot, the trend line’s width and color should not be distracting but should help reveal data patterns.
+
+5. The title is unclear and doesn’t describe what the plot is about. A good plot title should be informative, such as "Chocolate Review Scores from 2019 to 2021," to provide the viewer with context.
+
+6. The theme colors are very distracting. The panel is purple, the plot background is black, and the labels are in various clashing colors. This takes attention away from the data. When creating a good plot, the background should be subtle and not too vibrant.
+
+7. The axis label sizes and orientations are bad. The y-axis labels are too small to show the ratings range from 1 to 5, and the x-axis labels are vertical, making the years hard to read. When creating a good plot, labels should be clear and large enough to ensure viewers can easily see the values of each point.
+
+
+
+## Part 6: Make my plot a better plot!
+**The goal is to take my sad looking plot and make it better! If you’d like an example, here is a tweet I came across of someone who gave a talk about how to zhoosh up your ggplots.**
+**1. You need to customize it in at least 7 ways to make it better.**
+**2.In your document, write 1 - 2 sentences about each different customization you added (using bullets – i.e. there should be at least 7 bullet points each with 1-2 sentences), describing how you improved it.**
+
+```{r}
+chocolate %>%
+    ggplot(aes(
+        x = as.factor(review_date),
+        y = rating,
+        fill = review_date
+    )) +
+    geom_violin()
+```
+
+```{r}
+if (!require("viridis", quietly = TRUE)) {
+    install.packages("viridis")
+}
+library(viridis)
+
+average_ratings <- chocolate %>%
+  group_by(review_date) %>%
+  summarize(avg_rating = mean(rating, na.rm = TRUE))
+
+chocolate %>%
+  ggplot(aes(
+    x = as.factor(review_date),
+    y = rating,
+    fill = as.factor(review_date)
+  )) +
+  geom_violin(trim = FALSE) +
+  
+  scale_fill_viridis_d(option = "viridis") +
+  labs(
+    title = "Chocolate Ratings From 2006 to 2021", 
+    subtitle = "Distribution of chocolate review scores over time",
+    x = "Review Year",
+    y = "Rating",
+    fill = "Year"
+  ) +
+ geom_smooth(aes(group = 1), method = "loess", color = "white", size = 1.2, se = FALSE, show.legend = FALSE) +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 15, face = "bold"), 
+    plot.subtitle = element_text(size = 10), 
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major = element_line(size = 0.1)
+  )
+
+
+```
+
+1. changed the geom_violin(trim = TRUE) to geom_violin(trim = FALSE). This way we can see the rating above 4.
+2. added a loess trend line to show the overall trend in ratings across years.
+3. changed the title of the plot to "Chocolate Ratings From 2006 to 2021" and subtitle to "Distribution of chocolate review scores over time" to make the meaning of the plot clearer.
+4. changed the size of the title, x-lab and y-lab to make them more stand out and improve the clarity of the plot.
+5. Rotated the x-label year to 45 degree to make them not overlap to each other.
+6. changed the theme to minimal, helping the violin plot and its data stand out more prominently, and also changed the color of the plot to be factor.
+7. changed the gridlines to be thinner, this ensures they remain visible but do not distract from the actual data in the plot
 
 
 
